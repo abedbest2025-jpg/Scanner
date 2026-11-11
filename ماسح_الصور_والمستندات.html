@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17306b">
+<title>ماسح الصور والمستندات</title>
+<style>
+:root{--blue:#2456d7;--navy:#17306b;--bg:#f3f6fb;--ink:#172033;--muted:#64748b;--line:#dce4f0;--pale:#edf2ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:22px 18px 25px;background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff}
+header h1{font-size:22px;margin:0 0 5px}header p{margin:0;color:#dbeafe;font-size:13px}
+main{max-width:760px;margin:auto;padding:15px;display:grid;gap:13px}
+.card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:15px;box-shadow:0 5px 18px #17306b0a}
+h2{font-size:17px;margin:0 0 10px}.hint{font-size:13px;color:var(--muted);line-height:1.65;margin:4px 0 12px}
+button,.pick{border:0;border-radius:11px;padding:12px 13px;font:inherit;font-weight:650;cursor:pointer;text-align:center}
+button:disabled{opacity:.45;cursor:not-allowed}.primary{background:var(--blue);color:white}.secondary{background:var(--pale);color:#173b9a}.dark{background:var(--navy);color:white}.danger{background:#fff0f0;color:#ad2626}
+.row{display:flex;gap:9px;flex-wrap:wrap}.row>*{flex:1;min-width:125px}
+input[type=text]{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font:inherit;margin:6px 0 12px}
+input[type=range]{width:100%;accent-color:var(--blue)}
+label.control{display:block;font-size:13px;font-weight:650;margin:8px 0 3px}
+.preview{position:relative;min-height:180px;background:#111827;border-radius:13px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px}
+#previewCanvas{display:none;max-width:100%;max-height:55vh;width:auto;height:auto;touch-action:none}
+#empty{color:#cbd5e1;text-align:center;padding:36px 15px;font-size:14px}
+#selection{position:absolute;display:none;border:2px dashed white;box-shadow:0 0 0 9999px #0007;pointer-events:none}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.thumbgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px}
+.thumb{border:1px solid var(--line);border-radius:11px;padding:8px;min-width:0}
+.thumb img{width:100%;height:88px;object-fit:cover;border-radius:7px;background:#eef2f7}
+.thumb strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:5px 0}
+.thumb button{width:100%;padding:7px;font-size:12px;margin-top:6px}
+.notice{background:#fff8e6;border:1px solid #f1dfa8;border-radius:11px;padding:11px;font-size:12px;color:#73530a;line-height:1.65}
+.hidden{display:none!important}footer{text-align:center;padding:0 15px 22px;color:var(--muted);font-size:12px}
+@media(max-width:390px){.row>*{min-width:calc(50% - 8px)}.tools{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>📷 ماسح الصور والمستندات</h1><p>التقط صورك، عدّلها، سمِّها، واحفظها كصور أو ملفات PDF</p></header>
+<main>
+<section class="card">
+<h2>1. التقاط صورة أو اختيارها</h2>
+<p class="hint">بعد التقاط الصورة ستبقى في شاشة المعاينة حتى تعدّلها أو تحفظها.</p>
+<div class="row">
+<label class="pick primary" for="camera">📸 تشغيل الكاميرا</label>
+<input class="hidden" id="camera" type="file" accept="image/*" capture="environment">
+<label class="pick secondary" for="gallery">🖼️ اختيار من المعرض</label>
+<input class="hidden" id="gallery" type="file" accept="image/*">
+</div>
+</section>
+<section class="card">
+<h2>2. معاينة الصورة وتعديلها</h2>
+<div class="preview" id="previewArea"><div id="empty">ستظهر الصورة هنا بعد التقاطها</div><canvas id="previewCanvas"></canvas><div id="selection"></div></div>
+<p class="hint" id="cropHelp">يمكنك تدوير الصورة وتحسينها، أو تفعيل القص ثم سحب إصبعك على الصورة لتحديد الجزء المطلوب.</p>
+<div class="row">
+<button class="secondary" id="rotate" disabled>↻ تدوير 90°</button>
+<button class="secondary" id="cropToggle" disabled>✂️ تفعيل القص</button>
+<button class="secondary" id="reset" disabled>إعادة ضبط</button>
+</div>
+<div class="tools">
+<div><label class="control" for="brightness">السطوع <span id="bv">100%</span></label><input id="brightness" type="range" min="60" max="160" value="100" disabled></div>
+<div><label class="control" for="contrast">التباين <span id="cv">100%</span></label><input id="contrast" type="range" min="60" max="180" value="100" disabled></div>
+</div>
+<label class="control" for="name">اسم الصورة أو المستند</label>
+<input id="name" type="text" placeholder="مثال: فاتورة الكهرباء" disabled>
+<div class="row">
+<button class="primary" id="save" disabled>💾 حفظ الصورة</button>
+<button class="dark" id="onePdf" disabled>📄 حفظ كـ PDF</button>
+</div>
+</section>
+<section class="card">
+<h2>3. الصور المحفوظة</h2>
+<p class="hint">حدد صورة واحدة أو أكثر لإنشاء ملف PDF متعدد الصفحات. يمكنك أيضاً تنزيل كل صورة منفردة.</p>
+<div id="saved" class="thumbgrid"><p class="hint">لا توجد صور محفوظة بعد.</p></div>
+<div class="row" style="margin-top:12px">
+<button class="primary" id="manyPdf">إنشاء PDF للمحدد</button>
+<button class="danger" id="delete">حذف المحدد</button>
+</div>
+</section>
+<div class="notice">الخصوصية: الصور تُحفظ داخل مساحة التخزين المحلية لهذا المتصفح على هذا الهاتف ولا تُرسل إلى الإنترنت. لا تمسح بيانات المتصفح أو بيانات الموقع إذا أردت الاحتفاظ بالصور؛ نزّل نسخاً احتياطية من الصور المهمة. قد يعرض المتصفح واجهة الكاميرا أو اختيار الصور حسب نوع الهاتف.</div>
+</main>
+<footer>ملف مستقل يعمل من المتصفح — لا يحتاج إلى تسجيل دخول.</footer>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+let db=null,sourceImage=null,angle=0,cropRect=null,cropping=false,drag=null;
+let originalName='صورة';
+const openDB=indexedDB.open('LocalPhotoDocumentScanner',1);
+openDB.onupgradeneeded=()=>{if(!openDB.result.objectStoreNames.contains('photos'))openDB.result.createObjectStore('photos',{keyPath:'id',autoIncrement:true});};
+openDB.onsuccess=()=>{db=openDB.result;refreshSaved();};
+openDB.onerror=()=>alert('تعذر تفعيل التخزين المحلي في هذا المتصفح. جرّب فتح الملف في Chrome أو متصفح حديث.');
+function store(mode='readonly'){return db.transaction('photos',mode).objectStore('photos');}
+function loadFile(file){
+ if(!file)return;
+ const reader=new FileReader();
+ reader.onerror=()=>alert('تعذرت قراءة الصورة.');
+ reader.onload=()=>{
+  const img=new Image();
+  img.onload=()=>{
+   sourceImage=img;originalName=(file.name||'صورة').replace(/\.[^.]+$/,'');
+   angle=0;cropRect=null;cropping=false;
+   $('name').value=originalName;$('name').disabled=false;
+   ['rotate','cropToggle','reset','save','onePdf','brightness','contrast'].forEach(id=>$(id).disabled=false);
+   $('brightness').value=100;$('contrast').value=100;
+   $('cropToggle').textContent='✂️ تفعيل القص';$('selection').style.display='none';
+   $('empty').classList.add('hidden');$('previewCanvas').style.display='block';
+   updatePreview();
+  };
+  img.onerror=()=>alert('صيغة الصورة غير مدعومة.');
+  img.src=reader.result;
+ };
+ reader.readAsDataURL(file);
+}
+$('camera').addEventListener('change',e=>loadFile(e.target.files[0]));
+$('gallery').addEventListener('change',e=>loadFile(e.target.files[0]));
+function orientedSize(){const w=sourceImage.naturalWidth,h=sourceImage.naturalHeight;return angle%180===0?{w,h}:{w:h,h:w};}
+function drawProcessed(target,preview=false){
+ const size=orientedSize(),maxPreview=1500,scale=preview?Math.min(1,maxPreview/Math.max(size.w,size.h)):1;
+ let sx=0,sy=0,sw=size.w,sh=size.h;
+ if(cropRect){sx=Math.round(cropRect.x*size.w);sy=Math.round(cropRect.y*size.h);sw=Math.max(1,Math.round(cropRect.w*size.w));sh=Math.max(1,Math.round(cropRect.h*size.h));}
+ target.width=Math.max(1,Math.round(sw*scale));target.height=Math.max(1,Math.round(sh*scale));
+ const ctx=target.getContext('2d');
+ ctx.filter=`brightness(${$('brightness').value}%) contrast(${$('contrast').value}%)`;
+ ctx.translate(-sx*scale,-sy*scale);
+ ctx.translate(size.w*scale/2,size.h*scale/2);
+ ctx.rotate(angle*Math.PI/180);
+ ctx.drawImage(sourceImage,-sourceImage.naturalWidth*scale/2,-sourceImage.naturalHeight*scale/2,sourceImage.naturalWidth*scale,sourceImage.naturalHeight*scale);
+}
+function updatePreview(){
+ $('bv').textContent=$('brightness').value+'%';$('cv').textContent=$('contrast').value+'%';
+ drawProcessed($('previewCanvas'),true);
+}
+$('brightness').addEventListener('input',updatePreview);
+$('contrast').addEventListener('input',updatePreview);
+$('rotate').onclick=()=>{angle=(angle+90)%360;cropRect=null;$('selection').style.display='none';updatePreview();};
+$('reset').onclick=()=>{angle=0;cropRect=null;cropping=false;$('cropToggle').textContent='✂️ تفعيل القص';$('selection').style.display='none';$('brightness').value=100;$('contrast').value=100;updatePreview();};
+$('cropToggle').onclick=()=>{
+ cropping=!cropping;$('cropToggle').textContent=cropping?'✓ إنهاء تحديد القص':'✂️ تفعيل القص';
+ $('cropHelp').textContent=cropping?'اسحب على الصورة لتحديد منطقة القص، ثم اضغط «إنهاء تحديد القص».':'يمكنك تدوير الصورة وتحسينها، أو تفعيل القص ثم سحب إصبعك على الصورة.';
+ if(!cropping){$('selection').style.display='none';if(cropRect)updatePreview();}
+};
+$('previewCanvas').addEventListener('pointerdown',e=>{
+ if(!cropping)return;
+ const r=$('previewCanvas').getBoundingClientRect();
+ drag={x:e.clientX,y:e.clientY,r};
+ $('previewCanvas').setPointerCapture(e.pointerId);
+});
+$('previewCanvas').addEventListener('pointermove',e=>{
+ if(!drag)return;
+ const r=drag.r,area=$('previewArea').getBoundingClientRect();
+ const x=Math.max(r.left,Math.min(e.clientX,r.right)),y=Math.max(r.top,Math.min(e.clientY,r.bottom));
+ const x0=Math.max(r.left,Math.min(drag.x,r.right)),y0=Math.max(r.top,Math.min(drag.y,r.bottom));
+ const box=$('selection');box.style.display='block';
+ box.style.left=(Math.min(x,x0)-area.left+ $('previewArea').scrollLeft)+'px';
+ box.style.top=(Math.min(y,y0)-area.top+ $('previewArea').scrollTop)+'px';
+ box.style.width=Math.abs(x-x0)+'px';box.style.height=Math.abs(y-y0)+'px';
+});
+$('previewCanvas').addEventListener('pointerup',e=>{
+ if(!drag)return;
+ const r=drag.r;
+ const x1=Math.max(r.left,Math.min(drag.x,r.right)),y1=Math.max(r.top,Math.min(drag.y,r.bottom));
+ const x2=Math.max(r.left,Math.min(e.clientX,r.right)),y2=Math.max(r.top,Math.min(e.clientY,r.bottom));
+ if(Math.abs(x2-x1)>12&&Math.abs(y2-y1)>12){
+  cropRect={x:(Math.min(x1,x2)-r.left)/r.width,y:(Math.min(y1,y2)-r.top)/r.height,w:Math.abs(x2-x1)/r.width,h:Math.abs(y2-y1)/r.height};
+  updatePreview();
+ }
+ drag=null;
+});
+function finalCanvas(){const c=document.createElement('canvas');drawProcessed(c,false);return c;}
+function cleanName(s){return(s||'صورة').trim().replace(/[\\/:*?"<>|]/g,'_').slice(0,80)||'صورة';}
+function canvasBlob(c){return new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('تعذر تجهيز الصورة')),'image/jpeg',.93));}
+$('save').onclick=async()=>{
+ if(!db||!sourceImage)return;
+ try{const blob=await canvasBlob(finalCanvas()),name=cleanName($('name').value)+'.jpg';
+ const tx=db.transaction('photos','readwrite');tx.objectStore('photos').add({name,blob,created:Date.now()});
+ tx.oncomplete=()=>{refreshSaved();alert('تم حفظ الصورة محلياً في المتصفح.');};
+ tx.onerror=()=>alert('تعذر حفظ الصورة. قد تكون مساحة التخزين ممتلئة.');
+ }catch(err){alert(err.message);}
+};
+$('onePdf').onclick=async()=>{
+ if(!sourceImage)return;
+ try{const blob=await canvasBlob(finalCanvas());await makePDF([{name:cleanName($('name').value),blob}]);}
+ catch(err){alert('تعذر إنشاء PDF: '+err.message);}
+};
+function downloadBlob(blob,name){
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+function refreshSaved(){
+ if(!db)return;
+ store().getAll().onsuccess=e=>{
+  const items=e.target.result,root=$('saved');root.innerHTML='';
+  if(!items.length){root.innerHTML='<p class="hint">لا توجد صور محفوظة بعد.</p>';return;}
+  items.sort((a,b)=>b.created-a.created).forEach(item=>{
+   const box=document.createElement('div');box.className='thumb';
+   const img=document.createElement('img');const objectUrl=URL.createObjectURL(item.blob);img.src=objectUrl;img.onload=()=>URL.revokeObjectURL(objectUrl);
+   const line=document.createElement('div');line.style.display='flex';line.style.gap='5px';line.style.alignItems='center';
+   const cb=document.createElement('input');cb.type='checkbox';cb.dataset.id=item.id;cb.setAttribute('aria-label','تحديد '+item.name);
+   const title=document.createElement('strong');title.textContent=item.name;line.append(cb,title);
+   const dl=document.createElement('button');dl.className='secondary';dl.textContent='تنزيل الصورة';dl.onclick=()=>downloadBlob(item.blob,item.name);
+   box.append(img,line,dl);root.append(box);
+  });
+ };
+}
+$('delete').onclick=()=>{
+ const ids=[...document.querySelectorAll('#saved input:checked')].map(x=>Number(x.dataset.id));
+ if(!ids.length)return alert('حدد الصور التي تريد حذفها.');
+ if(!confirm('هل تريد حذف الصور المحددة؟'))return;
+ const tx=db.transaction('photos','readwrite');ids.forEach(id=>tx.objectStore('photos').delete(id));tx.oncomplete=refreshSaved;
+};
+$('manyPdf').onclick=()=>{
+ const ids=[...document.querySelectorAll('#saved input:checked')].map(x=>Number(x.dataset.id));
+ if(!ids.length)return alert('حدد صورة واحدة على الأقل.');
+ store().getAll().onsuccess=e=>makePDF(e.target.result.filter(x=>ids.includes(x.id)));
+};
+async function makePDF(items){
+ if(!items.length)return;
+ const pages=[];
+ for(const item of items){
+  const bitmap=await createImageBitmap(item.blob),bytes=new Uint8Array(await item.blob.arrayBuffer());
+  pages.push({bytes,w:bitmap.width,h:bitmap.height});bitmap.close();
+ }
+ const enc=new TextEncoder(),parts=[],offsets=[];let position=0;
+ const add=value=>{const bytes=typeof value==='string'?enc.encode(value):value;parts.push(bytes);position+=bytes.length;};
+ const object=(id,body)=>{offsets[id]=position;add(`${id} 0 obj\n${body}\nendobj\n`);};
+ add('%PDF-1.4\n');
+ const total=2+pages.length*3;
+ object(1,'<< /Type /Catalog /Pages 2 0 R >>');
+ object(2,`<< /Type /Pages /Kids [${pages.map((_,i)=>`${3+i*3} 0 R`).join(' ')}] /Count ${pages.length} >>`);
+ pages.forEach((p,i)=>{
+  const pageId=3+i*3,imageId=pageId+1,contentId=pageId+2;
+  const pageW=595,pageH=842,scale=Math.min(pageW/p.w,pageH/p.h),w=p.w*scale,h=p.h*scale,x=(pageW-w)/2,y=(pageH-h)/2;
+  object(pageId,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Resources << /XObject << /Im${i} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`);
+  offsets[imageId]=position;
+  add(`${imageId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.bytes.length} >>\nstream\n`);
+  add(p.bytes);add('\nendstream\nendobj\n');
+  const stream=`q\n${w} 0 0 ${h} ${x} ${y} cm\n/Im${i} Do\nQ\n`;
+  object(contentId,`<< /Length ${enc.encode(stream).length} >>\nstream\n${stream}endstream`);
+ });
+ const xref=position;add(`xref\n0 ${total+1}\n0000000000 65535 f \n`);
+ for(let i=1;i<=total;i++)add(String(offsets[i]).padStart(10,'0')+' 00000 n \n');
+ add(`trailer\n<< /Size ${total+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+ downloadBlob(new Blob(parts,{type:'application/pdf'}),'مستندات.pdf');
+}
+</script>
+</body>
+</html>
